@@ -1,7 +1,13 @@
 :root {
+  --navy: #302b70;
+  --yellow: #f9e547;
+  --cream: #fcfaf7;
+  --border: #e8e4ed;
+  --muted: #716b7a;
+
   font-family: "Segoe UI", Arial, sans-serif;
-  color: #243b33;
-  background: #fcfaf6;
+  color: var(--navy);
+  background: var(--cream);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -14,7 +20,7 @@
 
 html {
   scroll-behavior: smooth;
-  scroll-padding-top: 100px;
+  scroll-padding-top: 110px;
 }
 
 body {
@@ -23,7 +29,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -31,14 +39,14 @@ a {
   color: inherit;
 }
 
-button,
-a {
+a,
+button {
   -webkit-tap-highlight-color: transparent;
 }
 
 a:focus-visible,
 button:focus-visible {
-  outline: 3px solid #a6502d;
+  outline: 3px solid var(--navy);
   outline-offset: 5px;
 }
 
@@ -49,9 +57,17 @@ p {
   margin-top: 0;
 }
 
+address {
+  font-style: normal;
+}
+
+img {
+  max-width: 100%;
+}
+
 ::selection {
-  background: #e2cfab;
-  color: #243b33;
+  background: var(--yellow);
+  color: var(--navy);
 }
 
 @media (prefers-reduced-motion: reduce) {
