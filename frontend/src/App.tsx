@@ -69,6 +69,7 @@ function App() {
   const [videoUnavailable, setVideoUnavailable] = useState(false)
   const [filter, setFilter] = useState('All')
   const videoRef = useRef<HTMLVideoElement>(null)
+  const userRequestedPlayback = useRef(false) 
   const menuButtonRef = useRef<HTMLButtonElement>(null)
 
   const slide = slides[activeSlide]
@@ -83,7 +84,7 @@ function App() {
     const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
 
     function applyPreference() {
-      if (preference.matches) {
+     if (preference.matches && !userRequestedPlayback.current) {
         video?.pause()
       } else {
         void video?.play().catch(() => {
@@ -128,12 +129,22 @@ function App() {
     setMenuOpen(false)
   }
 
-  function selectSlide(index: number) {
-    if (index === activeSlide) return
-    setPlaying(false)
-    setVideoUnavailable(false)
-    setActiveSlide(index)
+ function selectSlide(index: number) {
+  userRequestedPlayback.current = true
+
+  if (index === activeSlide) {
+    const video = videoRef.current
+    if (!video) return
+
+    video.currentTime = 0
+    void video.play().catch(() => setPlaying(false))
+    return
   }
+
+  setPlaying(false)
+  setVideoUnavailable(false)
+  setActiveSlide(index)
+}
 
   function togglePlayback() {
     const video = videoRef.current
