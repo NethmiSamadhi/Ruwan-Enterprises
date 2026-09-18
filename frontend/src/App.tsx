@@ -1,208 +1,241 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
 
-const slides = [
+const banners = [
   {
-    src: '/videos/shopping-bags.mp4',
-    label: 'EVERYDAY FINDS',
-    title: 'Little essentials.',
-    accent: 'Lovely everyday living.',
+    video: '/videos/shopping-bags.mp4',
+    label: 'WELCOME TO RUWAN ENTERPRISES',
+    title: 'Everyday essentials.',
+    accent: 'Extraordinary possibilities.',
     description:
-      'Discover useful additions for your home, your kitchen, and the moments in between.',
+      'Explore household finds for your kitchen, your home, and everyday life.',
   },
   {
-    src: '/videos/online-shopping.mp4',
-    label: 'EXPLORE THE COLLECTION',
-    title: 'A little inspiration.',
-    accent: 'A home full of possibilities.',
+    video: '/videos/online-shopping.mp4',
+    label: 'DISCOVER YOUR NEXT FIND',
+    title: 'Make room for',
+    accent: 'something you love.',
     description:
-      'Explore our collection ideas and contact our team to find what you need.',
+      'Discover our collection ideas and speak with our team about availability.',
   },
   {
-    src: '/videos/store-shopping.mp4',
-    label: 'VISIT US IN DELKANDA',
+    video: '/videos/store-shopping.mp4',
+    label: 'DELKANDA · NUGEGODA',
     title: 'Your local store.',
-    accent: 'Your next favourite find.',
+    accent: 'A world of little essentials.',
     description:
-      'Visit Ruwan Enterprises on High Level Road, Delkanda, and explore in person.',
+      'Visit Ruwan Enterprises in Delkanda to explore the available range.',
   },
 ]
 
 const collections = [
   {
     id: 'kitchen',
-    group: 'Kitchen',
     title: 'Kitchen & Dining',
-    text: 'For cooking, serving, and gathering around the table.',
-    symbol: '◒',
-    color: 'peach',
+    category: 'Kitchen',
+    icon: '◒',
+    color: 'terracotta',
+    text: 'Essentials for preparing, serving, and sharing.',
+    detail:
+      'Looking for kitchen or dining items? Call our team to discuss the current range, prices, and availability.',
   },
   {
-    id: 'home',
-    group: 'Home',
-    title: 'Home Essentials',
-    text: 'Useful details that make everyday routines feel easier.',
-    symbol: '⌂',
-    color: 'sage',
+    id: 'household',
+    title: 'Household Essentials',
+    category: 'Home',
+    icon: '⌂',
+    color: 'olive',
+    text: 'Practical finds for your everyday routines.',
+    detail:
+      'Explore household essentials in store. Our team can help you check whether a particular item is available.',
   },
   {
     id: 'storage',
-    group: 'Organization',
     title: 'Storage & Organization',
-    text: 'A place for everything, with room for a little more.',
-    symbol: '▤',
-    color: 'lavender',
+    category: 'Storage',
+    icon: '▤',
+    color: 'purple',
+    text: 'Bring a little order to your favourite spaces.',
+    detail:
+      'Ask us about storage and organization options. Confirm available sizes and products with the store before visiting.',
   },
 ]
 
-const filters = ['All', 'Kitchen', 'Home', 'Organization']
-
 const mapUrl =
   'https://www.google.com/maps/search/?api=1&query=Ruwan+Enterprises+Delkanda+Nugegoda'
-
 const facebookUrl = 'https://www.facebook.com/Ruwanenterprises/'
 
-function App() {
+export default function App() {
   const [menuOpen, setMenuOpen] = useState(false)
-  const [activeSlide, setActiveSlide] = useState(0)
+  const [active, setActive] = useState(0)
   const [playing, setPlaying] = useState(false)
-  const [videoUnavailable, setVideoUnavailable] = useState(false)
+  const [videoFailed, setVideoFailed] = useState(false)
   const [filter, setFilter] = useState('All')
-  const videoRef = useRef<HTMLVideoElement>(null)
-  const userRequestedPlayback = useRef(false) 
-  const menuButtonRef = useRef<HTMLButtonElement>(null)
+  const [selected, setSelected] = useState<string | null>(null)
 
-  const slide = slides[activeSlide]
-  const visibleCollections = collections.filter(
-    (collection) => filter === 'All' || collection.group === filter,
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
+  const menuRef = useRef<HTMLButtonElement>(null)
+  const requestedPlayback = useRef(false)
+  const collectionTrigger = useRef<HTMLButtonElement | null>(null)
+
+  const banner = banners[active]
+  const selectedCollection = collections.find((item) => item.id === selected)
+  const shown = collections.filter(
+    (item) => filter === 'All' || item.category === filter,
   )
 
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
-    const preference = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)')
 
-    function applyPreference() {
-     if (preference.matches && !userRequestedPlayback.current) {
+    function applyMotionPreference() {
+      if (motion.matches && !requestedPlayback.current) {
         video?.pause()
       } else {
         void video?.play().catch(() => {
-          // Manual playback remains available when autoplay is blocked.
+          // A manual play control is available if autoplay is blocked.
         })
       }
     }
 
-    applyPreference()
-    preference.addEventListener('change', applyPreference)
+    applyMotionPreference()
+    motion.addEventListener('change', applyMotionPreference)
 
     return () => {
-      preference.removeEventListener('change', applyPreference)
+      motion.removeEventListener('change', applyMotionPreference)
       video.pause()
     }
-  }, [activeSlide])
+  }, [active])
 
   useEffect(() => {
-    function handleEscape(event: KeyboardEvent) {
-      if (event.key === 'Escape' && menuOpen) {
-        setMenuOpen(false)
-        menuButtonRef.current?.focus()
-      }
+    if (selected && dialogRef.current && !dialogRef.current.open) {
+      dialogRef.current.showModal()
     }
+  }, [selected])
 
+  useEffect(() => {
     const desktop = window.matchMedia('(min-width: 801px)')
 
-    function closeOnDesktop() {
+    function resizeMenu() {
       if (desktop.matches) setMenuOpen(false)
     }
 
-    window.addEventListener('keydown', handleEscape)
-    desktop.addEventListener('change', closeOnDesktop)
+    function escapeMenu(event: KeyboardEvent) {
+      if (event.key === 'Escape' && menuOpen) {
+        setMenuOpen(false)
+        menuRef.current?.focus()
+      }
+    }
+
+    desktop.addEventListener('change', resizeMenu)
+    window.addEventListener('keydown', escapeMenu)
 
     return () => {
-      window.removeEventListener('keydown', handleEscape)
-      desktop.removeEventListener('change', closeOnDesktop)
+      desktop.removeEventListener('change', resizeMenu)
+      window.removeEventListener('keydown', escapeMenu)
     }
   }, [menuOpen])
 
-  function closeMenu() {
-    setMenuOpen(false)
+  function chooseBanner(index: number) {
+    requestedPlayback.current = true
+
+    if (index === active) {
+      const video = videoRef.current
+      if (!video) return
+      video.currentTime = 0
+      void video.play().catch(() => setPlaying(false))
+      return
+    }
+
+    setPlaying(false)
+    setVideoFailed(false)
+    setActive(index)
   }
 
- function selectSlide(index: number) {
-  userRequestedPlayback.current = true
-
-  if (index === activeSlide) {
-    const video = videoRef.current
-    if (!video) return
-
-    video.currentTime = 0
-    void video.play().catch(() => setPlaying(false))
-    return
-  }
-
-  setPlaying(false)
-  setVideoUnavailable(false)
-  setActiveSlide(index)
-}
-
-  function togglePlayback() {
+  function toggleVideo() {
     const video = videoRef.current
     if (!video) return
 
     if (video.paused) {
+      requestedPlayback.current = true
       void video.play().catch(() => setPlaying(false))
     } else {
       video.pause()
     }
   }
 
+  function closeCollection() {
+    dialogRef.current?.close()
+  }
+
+  function restoreCollectionFocus() {
+    setSelected(null)
+    collectionTrigger.current?.focus()
+  }
+
   return (
     <>
       <a className="skip-link" href="#main">Skip to content</a>
 
-      <div className="topbar">
-        <div className="container topbar-inner">
-          <span>Everyday essentials. Thoughtfully explored.</span>
-          <a href="tel:+94112801246">Call our store: 011 280 1246</a>
+      <div className="announcement">
+        <div className="container announcement-inner">
+          <span>Household essentials · Delkanda, Nugegoda</span>
+          <a href="tel:+94112801246">011 280 1246 ↗</a>
         </div>
       </div>
 
       <header className="header">
         <div className="container header-inner">
-          <a className="logo-link" href="#home" onClick={closeMenu}>
+          <a
+            className="logo"
+            href="#home"
+            onClick={() => setMenuOpen(false)}
+          >
             <img
               src="/ruwan-logo.png"
               alt="Ruwan and Enterprises"
-              width="150"
-              height="84"
+              width="140"
+              height="76"
             />
           </a>
 
           <button
-            ref={menuButtonRef}
-            className="menu-button"
+            ref={menuRef}
             type="button"
+            className="menu-toggle"
             aria-expanded={menuOpen}
-            aria-controls="primary-navigation"
+            aria-controls="navigation"
             onClick={() => setMenuOpen(!menuOpen)}
           >
             {menuOpen ? 'Close ✕' : 'Menu ☰'}
           </button>
 
           <nav
-            id="primary-navigation"
-            className={`nav ${menuOpen ? 'nav-open' : ''}`}
+            id="navigation"
+            className={`navigation ${menuOpen ? 'open' : ''}`}
             aria-label="Main navigation"
           >
-            <a href="#home" onClick={closeMenu}>Home</a>
-            <a href="#collections" onClick={closeMenu}>Collections</a>
-            <a href="#story" onClick={closeMenu}>Our story</a>
-            <a href="#visit" onClick={closeMenu}>Visit us</a>
+            {[
+              ['Home', '#home'],
+              ['Collections', '#collections'],
+              ['Our story', '#story'],
+              ['Visit us', '#visit'],
+            ].map(([label, href]) => (
+              <a
+                key={href}
+                href={href}
+                onClick={() => setMenuOpen(false)}
+              >
+                {label}
+              </a>
+            ))}
           </nav>
 
-          <a className="header-cta" href="#visit">
-            Find our store <span aria-hidden="true">↗</span>
+          <a className="button button-yellow header-button" href="#visit">
+            Find our store ↗
           </a>
         </div>
       </header>
@@ -210,10 +243,10 @@ function App() {
       <main id="main">
         <section className="hero" id="home" aria-labelledby="hero-title">
           <video
-            key={slide.src}
+            key={banner.video}
             ref={videoRef}
             className="hero-video"
-            src={slide.src}
+            src={banner.video}
             muted
             loop
             playsInline
@@ -222,65 +255,56 @@ function App() {
             onPlay={() => setPlaying(true)}
             onPause={() => setPlaying(false)}
             onError={() => {
+              setVideoFailed(true)
               setPlaying(false)
-              setVideoUnavailable(true)
             }}
           />
 
-          <div className="hero-overlay" />
+          <div className="hero-shade" />
 
-          <div className="container hero-inner">
-            <div className="hero-copy">
-              <p className="eyebrow hero-eyebrow">
-                <span aria-hidden="true" /> {slide.label}
-              </p>
+          <div className="container hero-content">
+            <p className="eyebrow">{banner.label}</p>
+            <h1 id="hero-title">
+              {banner.title}
+              <span>{banner.accent}</span>
+            </h1>
+            <p className="hero-description">{banner.description}</p>
 
-              <h1 id="hero-title">
-                {slide.title}
-                <span>{slide.accent}</span>
-              </h1>
-
-              <p className="hero-description">{slide.description}</p>
-
-              <div className="hero-actions">
-                <a className="button button-yellow" href="#collections">
-                  Explore collections <span aria-hidden="true">↗</span>
-                </a>
-                <a className="hero-secondary" href="#visit">
-                  Visit our store <span aria-hidden="true">→</span>
-                </a>
-              </div>
-
-              <p className="hero-location">
-                DELKANDA, NUGEGODA · NO. 527, HIGH LEVEL ROAD
-              </p>
+            <div className="hero-actions">
+              <a className="button button-yellow" href="#collections">
+                Explore collections ↗
+              </a>
+              <a className="underlined-link" href="#visit">
+                Plan your visit →
+              </a>
             </div>
+
+            <p className="hero-address">NO. 527 · DELKANDA · NUGEGODA</p>
           </div>
 
           <div className="container hero-controls">
-            <div className="slide-buttons" aria-label="Select banner">
-              {slides.map((item, index) => (
+            <div className="banner-tabs" aria-label="Choose video banner">
+              {banners.map((item, index) => (
                 <button
                   type="button"
-                  key={item.src}
-                  className={index === activeSlide ? 'slide-active' : ''}
-                  aria-label={`Banner ${index + 1}: ${item.label}`}
-                  aria-pressed={index === activeSlide}
-                  onClick={() => selectSlide(index)}
+                  key={item.video}
+                  aria-label={`Play banner ${index + 1}: ${item.label}`}
+                  aria-pressed={active === index}
+                  className={active === index ? 'active' : ''}
+                  onClick={() => chooseBanner(index)}
                 >
                   {String(index + 1).padStart(2, '0')}
-                  <span aria-hidden="true" />
                 </button>
               ))}
             </div>
 
             <button
               type="button"
-              className="playback-button"
-              onClick={togglePlayback}
-              disabled={videoUnavailable}
+              className="playback"
+              onClick={toggleVideo}
+              disabled={videoFailed}
             >
-              {videoUnavailable
+              {videoFailed
                 ? 'Video unavailable'
                 : playing
                   ? 'Pause video'
@@ -289,43 +313,34 @@ function App() {
           </div>
         </section>
 
-        <section className="intro-strip" aria-label="Store highlights">
-          <div className="container intro-grid">
-            <div>
-              <span className="intro-icon" aria-hidden="true">⌂</span>
-              <p><strong>For everyday living</strong><span>Household essentials</span></p>
-            </div>
-            <div>
-              <span className="intro-icon" aria-hidden="true">↗</span>
-              <p><strong>Explore in person</strong><span>Visit our Delkanda store</span></p>
-            </div>
-            <div>
-              <span className="intro-icon" aria-hidden="true">◎</span>
-              <p><strong>Talk to our team</strong><span>Call for product availability</span></p>
-            </div>
+        <div className="benefits">
+          <div className="container benefits-grid">
+            <div><span aria-hidden="true">⌂</span><p>For your everyday home</p></div>
+            <div><span aria-hidden="true">↗</span><p>Discover in our store</p></div>
+            <div><span aria-hidden="true">◎</span><p>Call for availability</p></div>
           </div>
-        </section>
+        </div>
 
-        <section className="section collections" id="collections">
+        <section className="section" id="collections">
           <div className="container">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">THE EVERYDAY COLLECTION</p>
-                <h2>Find your kind of essential.</h2>
+                <p className="eyebrow">EXPLORE RUWAN</p>
+                <h2>Little things.<br /><em>Endless possibilities.</em></h2>
               </div>
-              <p className="section-description">
-                Explore our suggested collection groups.
-                Call the store to confirm the current range.
+              <p>
+                Browse collection ideas, then contact our team
+                for the current product range and prices.
               </p>
             </div>
 
-            <div className="filters" aria-label="Filter collections">
-              {filters.map((item) => (
+            <div className="filters" aria-label="Collection filters">
+              {['All', 'Kitchen', 'Home', 'Storage'].map((item) => (
                 <button
-                  type="button"
                   key={item}
-                  className={filter === item ? 'filter-active' : ''}
+                  type="button"
                   aria-pressed={filter === item}
+                  className={filter === item ? 'active' : ''}
                   onClick={() => setFilter(item)}
                 >
                   {item}
@@ -334,28 +349,31 @@ function App() {
             </div>
 
             <p className="sr-only" role="status">
-              {visibleCollections.length} collections shown
+              {shown.length} collections displayed
             </p>
 
             <div className="collection-grid">
-              {visibleCollections.map((collection) => (
-                <article className="collection-card" key={collection.id}>
-                  <div className={`collection-art ${collection.color}`}>
-                    <span className="collection-art-label">RUWAN COLLECTION</span>
-                    <span className="collection-symbol" aria-hidden="true">
-                      {collection.symbol}
-                    </span>
-                    <span className="collection-art-caption">
-                      Simple things. Everyday possibilities.
-                    </span>
+              {shown.map((item) => (
+                <article className="collection-card" key={item.id}>
+                  <div className={`collection-art ${item.color}`}>
+                    <span className="art-label">THE EVERYDAY COLLECTION</span>
+                    <span className="art-symbol" aria-hidden="true">{item.icon}</span>
+                    <span className="art-caption">RUWAN ENTERPRISES</span>
                   </div>
-
-                  <div className="collection-content">
-                    <h3>{collection.title}</h3>
-                    <p>{collection.text}</p>
-                    <a href="#visit">
-                      Ask about this collection <span aria-hidden="true">↗</span>
-                    </a>
+                  <div className="collection-body">
+                    <h3>{item.title}</h3>
+                    <p>{item.text}</p>
+                    <button
+                      className="collection-button"
+                      type="button"
+                      aria-haspopup="dialog"
+                      onClick={(event) => {
+                        collectionTrigger.current = event.currentTarget
+                        setSelected(item.id)
+                      }}
+                    >
+                      Explore collection <span aria-hidden="true">↗</span>
+                    </button>
                   </div>
                 </article>
               ))}
@@ -365,75 +383,67 @@ function App() {
 
         <section className="story section" id="story">
           <div className="container story-grid">
-            <div className="story-visual">
-              <span className="story-visual-label">YOUR LOCAL HOUSEHOLD STORE</span>
-              <div className="story-logo">
-                <img
-                  src="/ruwan-logo.png"
-                  alt="Ruwan and Enterprises"
-                  width="270"
-                  height="270"
-                  loading="lazy"
-                />
-              </div>
-              <span className="story-visual-bottom">DELKANDA · NUGEGODA</span>
+            <div className="story-art">
+              <span className="eyebrow">YOUR LOCAL HOUSEHOLD STORE</span>
+              <img
+                src="/ruwan-logo.png"
+                alt="Ruwan and Enterprises"
+                width="280"
+                height="280"
+                loading="lazy"
+              />
+              <span className="story-caption">DELKANDA · NUGEGODA</span>
             </div>
 
             <div className="story-copy">
-              <p className="eyebrow">A LITTLE ABOUT RUWAN</p>
-              <h2>Everyday living starts with the little things.</h2>
+              <p className="eyebrow">OUR STORY</p>
+              <h2>A place for<br /><em>everyday discoveries.</em></h2>
               <p>
-                A useful kitchen addition. A tidier corner. Something
-                practical for the family. Small details can make a
-                difference to the way you enjoy your home.
+                Ruwan Enterprises is a household goods store in
+                Delkanda, Nugegoda. We invite you to explore practical
+                finds for your kitchen, home, and everyday routines.
               </p>
               <p>
-                Ruwan Enterprises is a household goods store in Delkanda,
-                Nugegoda. Visit us to explore the available range and
-                speak with our team about what you need.
+                Have a particular item in mind? Speak with our team
+                to check availability before visiting.
               </p>
               <a className="button button-navy" href="#visit">
-                Plan your visit <span aria-hidden="true">↗</span>
+                Come visit us ↗
               </a>
             </div>
           </div>
         </section>
 
-        <section className="visit section" id="visit">
+        <section className="section" id="visit">
           <div className="container">
-            <div className="visit-card">
-              <div className="visit-copy">
-                <p className="eyebrow">WE’D LOVE TO SEE YOU</p>
-                <h2>Your next find is a visit away.</h2>
-                <p>
-                  Looking for something specific? Call us to check
-                  availability before coming to the store.
-                </p>
+            <div className="visit-panel">
+              <div>
+                <p className="eyebrow">LET’S MAKE IT A VISIT</p>
+                <h2>Your next find<br /><em>could be here.</em></h2>
+                <p>Explore in person or call us about a specific item.</p>
                 <a
                   className="button button-yellow"
                   href={mapUrl}
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Get directions <span aria-hidden="true">↗</span>
+                  Get directions ↗
                 </a>
               </div>
 
-              <div className="visit-details">
-                <span className="detail-label">FIND US</span>
+              <div className="visit-information">
+                <p className="eyebrow">STORE LOCATION</p>
                 <address>
-                  <strong>Ruwan Enterprises</strong>
-                  No. 527, High Level Road<br />
-                  Delkanda, Nugegoda<br />
-                  Sri Lanka
+                  <strong>Ruwan Enterprises — Delkanda</strong>
+                  No. 527, Avissawella Road<br />
+                  Delkanda, Nugegoda, Sri Lanka
                 </address>
-
-                <div className="visit-divider" />
-
-                <span className="detail-label">CALL OUR STORE</span>
-                <a className="visit-phone" href="tel:+94112801246">
+                <div className="divider" />
+                <p className="eyebrow">CONTACT OUR TEAM</p>
+                <a className="phone" href="tel:+94112801246">
                   011 280 1246
                 </a>
+                <p className="visit-note">Call to confirm opening hours.</p>
               </div>
             </div>
           </div>
@@ -443,35 +453,33 @@ function App() {
       <footer className="footer">
         <div className="container footer-grid">
           <div className="footer-brand">
-            <a href="#home">
-              <img
-                src="/ruwan-logo.png"
-                alt="Ruwan and Enterprises homepage"
-                width="180"
-                height="140"
-                loading="lazy"
-              />
-            </a>
-            <p>Little essentials.<br />Better everyday living.</p>
+            <img
+              src="/ruwan-logo.png"
+              alt="Ruwan and Enterprises"
+              width="170"
+              height="130"
+              loading="lazy"
+            />
+            <p>Everyday essentials.<br />A home full of possibilities.</p>
           </div>
 
-          <div className="footer-column">
+          <div>
             <h2>Our collection</h2>
             <ul>
-              {collections.map((collection) => (
-                <li key={collection.id}>
+              {collections.map((item) => (
+                <li key={item.id}>
                   <a
                     href="#collections"
-                    onClick={() => setFilter(collection.group)}
+                    onClick={() => setFilter(item.category)}
                   >
-                    {collection.title}
+                    {item.title}
                   </a>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="footer-column">
+          <div>
             <h2>Discover Ruwan</h2>
             <ul>
               <li><a href="#story">Our story</a></li>
@@ -484,12 +492,9 @@ function App() {
             </ul>
           </div>
 
-          <div className="footer-column">
+          <div>
             <h2>Get in touch</h2>
-            <address>
-              No. 527, High Level Road<br />
-              Delkanda, Nugegoda
-            </address>
+            <address>No. 527, Avissawella Road<br />Delkanda, Nugegoda</address>
             <a className="footer-phone" href="tel:+94112801246">
               011 280 1246
             </a>
@@ -506,8 +511,50 @@ function App() {
           </div>
         </div>
       </footer>
+
+      <dialog
+        ref={dialogRef}
+        className="collection-dialog"
+        aria-labelledby="dialog-title"
+        onClose={restoreCollectionFocus}
+        onClick={(event) => {
+          if (event.target !== event.currentTarget) return
+          const bounds = event.currentTarget.getBoundingClientRect()
+          if (
+            event.clientX < bounds.left ||
+            event.clientX > bounds.right ||
+            event.clientY < bounds.top ||
+            event.clientY > bounds.bottom
+          ) {
+            closeCollection()
+          }
+        }}
+      >
+        <button
+          type="button"
+          className="dialog-close"
+          aria-label="Close collection"
+          onClick={closeCollection}
+        >
+          ✕
+        </button>
+        <p className="eyebrow">EXPLORE RUWAN</p>
+        <h2 id="dialog-title">{selectedCollection?.title}</h2>
+        <p className="dialog-description">{selectedCollection?.detail}</p>
+        <div className="dialog-actions">
+          <a className="button button-navy" href="tel:+94112801246">
+            Call the store ↗
+          </a>
+          <a
+            className="button button-light"
+            href={mapUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Get directions ↗
+          </a>
+        </div>
+      </dialog>
     </>
   )
 }
-
-export default App
